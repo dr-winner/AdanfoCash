@@ -1,0 +1,28 @@
+
+{
+  "canisters": {
+    "adanfocash_backend": {
+      "main": "backend/main.mo",
+      "type": "motoko"
+    },
+    "adanfocash_frontend": {
+      "dependencies": [
+        "adanfocash_backend"
+      ],
+      "frontend": {
+        "entrypoint": "dist/index.html"
+      },
+      "source": [
+        "dist/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "version": 1
+}

@@ -1,0 +1,13 @@
+{
+  "name": "adanfocash",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "src/AdanfoCash_frontend"
+  ],
+  "scripts": {
+    "start": "dfx start",
+    "deploy": "dfx deploy",
+    "build": "dfx build"
+  }
+}

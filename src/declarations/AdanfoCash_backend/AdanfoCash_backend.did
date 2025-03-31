@@ -1,0 +1,89 @@
+type User = 
+ record {
+   createdAt: int;
+   creditScore: nat;
+   email: text;
+   id: principal;
+   isActive: bool;
+   name: text;
+   phone: text;
+   totalBorrowed: float64;
+   totalLoans: nat;
+ };
+type TransactionType = 
+ variant {
+   InterestAccrual;
+   LateFee;
+   LoanDisbursement;
+   Payment;
+ };
+type TransactionStatus = 
+ variant {
+   Completed;
+   Failed;
+   Pending;
+ };
+type Transaction = 
+ record {
+   amount: float64;
+   id: text;
+   loanId: text;
+   status: TransactionStatus;
+   timestamp: int;
+   transactionType: TransactionType;
+   userId: principal;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: Loan;
+ };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: User;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: Transaction;
+ };
+type LoanStatus = 
+ variant {
+   Active;
+   Approved;
+   Completed;
+   Defaulted;
+   Pending;
+   Rejected;
+ };
+type Loan = 
+ record {
+   amount: float64;
+   createdAt: int;
+   dueDate: int;
+   id: text;
+   interestRate: float64;
+   lastPaymentDate: opt int;
+   monthlyPayment: float64;
+   remainingBalance: float64;
+   status: LoanStatus;
+   term: nat;
+   userId: principal;
+ };
+service : {
+  applyForLoan: (float64, nat) -> (Result_2);
+  approveLoan: (text) -> (Result_2);
+  createUser: (text, text, text) -> (Result_1);
+  getLoanStats: () ->
+   (record {
+      activeLoans: nat;
+      totalDisbursed: float64;
+      totalLoans: nat;
+      totalRepaid: float64;
+    }) query;
+  getLoansByUser: (principal) -> (vec Loan) query;
+  getTransactionsByLoan: (text) -> (vec Transaction) query;
+  getUser: (principal) -> (opt User) query;
+  makePayment: (text, float64) -> (Result);
+}

@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "AdanfoCash_backend": {
+      "main": "src/AdanfoCash_backend/main.mo",
+      "type": "motoko"
+    },
+    "AdanfoCash_frontend": {
+      "dependencies": [
+        "AdanfoCash_backend"
+      ],
+      "source": [
+        "src/AdanfoCash_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "AdanfoCash_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

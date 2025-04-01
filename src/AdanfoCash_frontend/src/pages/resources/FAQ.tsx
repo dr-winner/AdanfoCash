@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
@@ -37,7 +36,7 @@ const faqData: FAQCategory[] = [
       },
       {
         question: "Who can use AdanfoCash?",
-        answer: "AdanfoCash is available to anyone with an Internet Identity. We currently serve users in Ghana and neighboring countries, with plans to expand across Africa."
+        answer: "AdanfoCash is currently available to students from three universities in Ghana: University of Professional Studies Accra (UPSA), the University of Ghana (Legon), Kwame Nkrumah University of Science and Technology (KNUST). We plan to expand to more universities across Ghana and neighboring countries in the future."
       },
       {
         question: "What are the fees for using AdanfoCash?",
@@ -54,11 +53,11 @@ const faqData: FAQCategory[] = [
       },
       {
         question: "What loan amounts can I request?",
-        answer: "AdanfoCash supports loans ranging from 100 GHS to 10,000 GHS, with flexible repayment terms from 1 month to 12 months."
+        answer: "AdanfoCash supports loans ranging from 100 GHS to 10,000 GHS. The borrowing and repayment period is strictly between 1 to 6 months, with monthly repayment installments. This short-term structure helps students manage their finances effectively within an academic semester."
       },
       {
         question: "How is my creditworthiness determined?",
-        answer: "AdanfoCash uses a combination of traditional credit scoring and innovative alternative data points such as mobile money transaction history, utility bill payments, and social connections to assess creditworthiness."
+        answer: "AdanfoCash assesses student creditworthiness through a combination of factors including academic performance, student ID verification, university enrollment status, and existing transaction history. We also consider student's academics records to ensure responsible lending practices."
       },
       {
         question: "What happens if I can't repay my loan on time?",
@@ -75,11 +74,11 @@ const faqData: FAQCategory[] = [
       },
       {
         question: "What returns can I expect as a lender?",
-        answer: "Lenders can typically earn annual returns between 8% and 15%, depending on the risk profile of the loans they choose to fund. Higher-risk loans generally offer higher interest rates."
+        answer: "Lenders can typically earn  returns between 8% and 15%, depending on the risk profile of the loans they choose to fund. Higher-risk loans generally offer higher interest rates."
       },
       {
         question: "How is my investment protected?",
-        answer: "AdanfoCash implements several safeguards including escrow mechanisms, insurance for certain loan categories, and a reserve fund to cover potential defaults. Additionally, our rigorous borrower verification and credit assessment minimize default risks."
+        answer: "AdanfoCash implements several safeguards including escrow mechanisms, insurance for certain loan categories. Additionally, our rigorous borrower verification and credit assessment minimize default risks."
       },
       {
         question: "Can I withdraw my funds at any time?",

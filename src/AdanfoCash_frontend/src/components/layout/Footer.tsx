@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Globe, Heart } from 'lucide-react';
@@ -10,13 +9,10 @@ const Footer: React.FC = () => {
       <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">© 2024 AdanfoCash</span>
+            <span className="text-sm text-muted-foreground">© 2025 AdanfoCash</span>
           </div>
           
           <nav className="flex items-center space-x-4">
-            <Link to="/resources" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              Resources
-            </Link>
             <Link to="/resources/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
               FAQ
             </Link>

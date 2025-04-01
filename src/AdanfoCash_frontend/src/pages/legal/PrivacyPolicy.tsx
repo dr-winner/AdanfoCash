@@ -46,7 +46,7 @@ const PrivacyPolicy: React.FC = () => {
               transition={{ delay: 0.3 }}
               className="text-muted-foreground max-w-2xl mx-auto"
             >
-              Last updated: June 1, 2023
+              Last updated: April 1, 2025
             </motion.p>
           </div>
 
@@ -105,10 +105,10 @@ const PrivacyPolicy: React.FC = () => {
                 </p>
                 <p>
                   AdanfoCash<br />
-                  123 Finance Street<br />
+                  540 Branter Street<br />
                   Accra, Ghana<br />
                   Email: privacy@adanfocash.com<br />
-                  Phone: +233 123 456 789
+                  Phone: +233 557 823 321
                 </p>
               </div>
             </CardContent>

@@ -29,24 +29,5 @@ export const getIdentity = async (): Promise<Identity | undefined> => {
   return client.getIdentity();
 };
 
-// Login with Internet Identity
-export const login = async (): Promise<boolean> => {
-  const client = await initAuth();
-  
-  return new Promise((resolve) => {
-    client.login({
-      identityProvider: "https://identity.ic0.app",
-      onSuccess: () => resolve(true),
-      onError: (error) => {
-        console.error("Login error:", error);
-        resolve(false);
-      }
-    });
-  });
-};
-
-// Logout
-export const logout = async (): Promise<void> => {
-  const client = await initAuth();
-  await client.logout();
-};
+// Login and logout functions are now moved to authOperations.ts
+// to avoid conflicts, so they are removed from here

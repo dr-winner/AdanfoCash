@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import EnhancedButton from '@/components/ui/enhanced-button';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuthContext';
-import { AlertCircle, User, CreditCard, GraduationCap, School } from 'lucide-react';
+import { AlertCircle, GraduationCap, School } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { motion } from 'framer-motion';
 import ZKPassVerification from '@/components/borrower/ZKPassVerification';
@@ -18,42 +17,57 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ParticleBackground from '@/components/shared/ParticleBackground';
 
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
-});
+// Empty form schema since all data is collected in ZKPassVerification
+const formSchema = z.object({});
 
 const BorrowerRegistration: React.FC = () => {
-  const { user, registerUser } = useAuth();
+  const { user, registerUser, checkAuth } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isVerifying, setIsVerifying] = useState(false);
   
   useEffect(() => {
-    if (user.isAuthenticated && user.role === 'borrower') {
-      navigate('/borrower-dashboard');
-    }
+    // Refresh auth state when component mounts
+    checkAuth();
     
-    if (user.isAuthenticated && user.role === 'lender') {
-      navigate('/lender-dashboard');
-    }
+    // Check user state after a slight delay to ensure it's current
+    const checkUserState = setTimeout(() => {
+      if (user.isAuthenticated && user.role === 'borrower') {
+        navigate('/borrower-dashboard');
+      }
+      
+      if (user.isAuthenticated && user.role === 'lender') {
+        navigate('/lender-dashboard');
+      }
+      
+      if (!user.isAuthenticated) {
+        navigate('/wallet-connection');
+      }
+    }, 100);
     
-    if (!user.isAuthenticated) {
-      navigate('/wallet-connection');
-    }
-  }, [user, navigate]);
+    return () => clearTimeout(checkUserState);
+  }, [user, navigate, checkAuth]);
   
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: user.id || '',
-    },
+    resolver: zodResolver(formSchema)
   });
   
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async () => {
     try {
-      const success = await registerUser('borrower', values.name);
+      if (!user.isVerified) {
+        toast({
+          title: "Verification Required",
+          description: "You must complete student verification before registering.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Get the student info to use the real name for registration
+      const fullName = user.studentInfo?.fullName || '';
+      
+      // Register with the student's real name
+      const success = await registerUser('borrower', fullName);
       
       if (success) {
         toast({
@@ -75,6 +89,8 @@ const BorrowerRegistration: React.FC = () => {
   const handleVerificationComplete = (success: boolean) => {
     setIsVerifying(false);
     if (success) {
+      // Refresh auth state to get updated verification status
+      checkAuth();
       toast({
         title: "Verification Successful",
         description: "Your student status has been verified using ZKPass.",
@@ -83,7 +99,7 @@ const BorrowerRegistration: React.FC = () => {
   };
   
   if (!user.isAuthenticated) {
-    return null;
+    return null; // This will redirect in the useEffect
   }
   
   return (
@@ -116,10 +132,10 @@ const BorrowerRegistration: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <GraduationCap className="h-5 w-5 text-adanfo-blue" /> 
-                      Create Your Student Profile
+                      Complete Student Verification
                     </CardTitle>
                     <CardDescription>
-                      Fill in your details to start your student borrowing journey
+                      Verify your student status to start your borrowing journey
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -127,50 +143,30 @@ const BorrowerRegistration: React.FC = () => {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Important</AlertTitle>
                       <AlertDescription>
-                        All student borrowers must complete ZKPass verification before applying for loans. This process verifies your student status without revealing personal information.
+                        All student borrowers must complete ZKPass verification before applying for loans. This process verifies your student status and academic records securely.
                       </AlertDescription>
                     </Alert>
                     
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="Crypto Learner" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        
+                      <form className="space-y-6">
                         <div className="pt-2">
-                          <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
-                            Initial Credit Score: <span className="font-medium">650</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            All new student borrowers start with a base credit score of 650. Your score will improve as you successfully repay loans.
-                          </p>
+                          <Alert variant="destructive" className="bg-adanfo-blue/5 mt-4">
+                            <School className="h-4 w-4 text-adanfo-blue" />
+                            <AlertTitle>Student Verification Required</AlertTitle>
+                            <AlertDescription className="text-sm">
+                              Verification will check:
+                              <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>Current enrollment at a recognized university</li>
+                                <li>GPA verification from academic records</li>
+                                <li>Graduation date at least 5 months away</li>
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
                         </div>
                       </form>
                     </Form>
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    <Alert variant="destructive" className="bg-adanfo-blue/5 mb-2">
-                      <School className="h-4 w-4 text-adanfo-blue" />
-                      <AlertTitle>Student Verification Required</AlertTitle>
-                      <AlertDescription className="text-sm">
-                        Verification will check:
-                        <ul className="list-disc list-inside mt-1 space-y-1">
-                          <li>Current enrollment at a recognized university</li>
-                          <li>Minimum GPA of 1.5/4.0</li>
-                          <li>Graduation date at least 5 months away</li>
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                    
                     <EnhancedButton 
                       onClick={() => setIsVerifying(true)}
                       variant="default"
@@ -180,7 +176,7 @@ const BorrowerRegistration: React.FC = () => {
                     </EnhancedButton>
                     
                     <Button 
-                      onClick={form.handleSubmit(onSubmit)} 
+                      onClick={onSubmit} 
                       className="w-full"
                       disabled={!user.isVerified}
                     >

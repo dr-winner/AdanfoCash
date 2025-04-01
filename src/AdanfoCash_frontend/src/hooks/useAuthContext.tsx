@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, anonymousUser } from '../types/authTypes';
@@ -5,7 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { AuthContextType } from '@/types/auth';
 import { redirectBasedOnRole, checkRouteAccess } from '@/utils/authUtils';
 import { getCurrentUser } from '../services/userService';
-import { isAuthenticated, login as authLogin, logout as authLogout } from '../services/authClient';
+import { isAuthenticated } from '../services/authClient';
+import { login as authLogin, logout as authLogout } from '../services/authOperations';
 import { registerUser as registerUserService } from '../services/userService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

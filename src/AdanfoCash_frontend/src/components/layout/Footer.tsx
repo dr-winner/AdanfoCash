@@ -1,76 +1,49 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Heart } from 'lucide-react';
+import { Github, Globe, Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-secondary/30 dark:bg-secondary/10 backdrop-blur-sm border-t border-border">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Brand Column */}
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <Link to="/" className="inline-block">
-              <span className="text-2xl font-bold font-display bg-gradient-to-r from-adanfo-blue to-adanfo-purple bg-clip-text text-transparent">
-                AdanfoCash
-              </span>
-            </Link>
-            <p className="mt-2 text-sm text-foreground/70">
-              Financial freedom for students, powered by blockchain.
-            </p>
-          </motion.div>
+    <footer className="w-full border-t bg-background py-6">
+      <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">© 2024 AdanfoCash</span>
+          </div>
           
-          {/* Platform Column */}
-          <motion.div 
-            className="space-y-4"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <h4 className="text-lg font-medium">Platform</h4>
-            <ul className="space-y-2">
-              {[
-                { label: 'Home', url: '/' },
-                { label: 'Borrow', url: '/borrower-dashboard' },
-                { label: 'Lend', url: '/lender-dashboard' },
-                { label: 'FAQs', url: '/resources/faq' },
-              ].map((link, linkIndex) => (
-                <li key={linkIndex}>
-                  <Link 
-                    to={link.url} 
-                    className="text-sm text-foreground/70 hover:text-foreground hover:underline"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
+          <nav className="flex items-center space-x-4">
+            <Link to="/resources" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Resources
+            </Link>
+            <Link to="/resources/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              FAQ
+            </Link>
+            <Link to="/legal/privacy-policy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Privacy Policy
+            </Link>
+          </nav>
+          
+          <div className="flex items-center gap-4">
+            <a 
+              href="https://github.com/adanfo-github" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Github size={16} />
+            </a>
+            <a 
+              href="https://adanfocash.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Globe size={16} />
+            </a>
+          </div>
         </div>
-        
-        {/* Bottom Copyright */}
-        <motion.div 
-          className="pt-8 mt-8 border-t border-border/50 text-center text-sm text-foreground/60"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          <p className="flex justify-center items-center gap-1">
-            Made with <Heart size={14} className="text-red-500" /> for decentralized finance
-          </p>
-          <p className="mt-1">
-            © {new Date().getFullYear()} AdanfoCash. All rights reserved.
-          </p>
-        </motion.div>
       </div>
     </footer>
   );

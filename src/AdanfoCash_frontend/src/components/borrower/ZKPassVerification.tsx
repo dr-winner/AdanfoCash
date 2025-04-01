@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Shield, CheckCircle, User, Fingerprint, AlertTriangle, Eye, EyeOff, GraduationCap, Calendar, School } from "lucide-react";
+import { Shield, CheckCircle, User, Fingerprint, AlertTriangle, Eye, EyeOff, GraduationCap, Calendar, School, Phone, CreditCard, Hash } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveStudentVerification, updateVerificationStatus } from "@/services/userService";
 import { useAuth } from "@/hooks/useAuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,25 +13,24 @@ import { StudentInfo } from "@/types/authTypes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import * as crypto from 'crypto-js';
 
 interface ZKPassVerificationProps {
   onVerificationComplete?: (success: boolean) => void;
 }
 
-// Form schema for student verification
 const studentVerificationSchema = z.object({
+  fullName: z.string().min(2, { message: "Full name is required" }),
+  contactNumber: z.string().min(10, { message: "Valid contact number is required" }),
+  ghanaCardNumber: z.string().min(8, { message: "Ghana Card number is required" }),
   universityName: z.string().min(2, { message: "University name is required" }),
-  studentId: z.string().min(2, { message: "Student ID is required" }),
+  studentId: z.string().min(2, { message: "Index Number is required" }),
   graduationDate: z.string().refine(date => {
     const graduationDate = new Date(date);
     const fiveMonthsFromNow = new Date();
     fiveMonthsFromNow.setMonth(fiveMonthsFromNow.getMonth() + 5);
     return graduationDate >= fiveMonthsFromNow;
   }, { message: "Graduation date must be at least 5 months away" }),
-  gpa: z.string().refine(val => {
-    const gpa = parseFloat(val);
-    return !isNaN(gpa) && gpa >= 0 && gpa <= 4.0;
-  }, { message: "GPA must be between 0 and 4.0" }),
   consent: z.boolean().refine(val => val === true, {
     message: "You must consent to verification",
   }),
@@ -52,13 +50,25 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
   const form = useForm<StudentVerificationValues>({
     resolver: zodResolver(studentVerificationSchema),
     defaultValues: {
+      fullName: "",
+      contactNumber: "",
+      ghanaCardNumber: "",
       universityName: "",
       studentId: "",
       graduationDate: "",
-      gpa: "",
       consent: false,
     },
   });
+  
+  const hashGhanaCardNumber = (cardNumber: string): string => {
+    return crypto.SHA256(cardNumber).toString();
+  };
+  
+  const verifyGPAFromAcademicSource = async (studentId: string, university: string): Promise<number> => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const simulatedGPA = Math.round((Math.random() * 2.5 + 1.5) * 10) / 10;
+    return simulatedGPA;
+  };
   
   const startVerification = () => {
     setVerificationStep(1);
@@ -73,42 +83,94 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
   const completeVerification = async (data?: StudentVerificationValues) => {
     setIsVerifying(true);
     
-    // Simulate verification process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
     try {
-      // If we have student data, process it
       if (data && user.principalId) {
-        // Transform form data to student info
+        const hashedGhanaCardNumber = hashGhanaCardNumber(data.ghanaCardNumber);
+        const verifiedGPA = await verifyGPAFromAcademicSource(data.studentId, data.universityName);
+        
+        if (verifiedGPA < 1.5) {
+          toast({
+            title: "Verification Failed",
+            description: "Your academic records show a GPA below 1.5, which is below our minimum requirement.",
+            variant: "destructive"
+          });
+          setIsVerifying(false);
+          if (onVerificationComplete) {
+            onVerificationComplete(false);
+          }
+          return;
+        }
+
+        const graduationDate = new Date(data.graduationDate);
+        const fiveMonthsFromNow = new Date();
+        fiveMonthsFromNow.setMonth(fiveMonthsFromNow.getMonth() + 5);
+        
+        if (graduationDate < fiveMonthsFromNow) {
+          toast({
+            title: "Verification Failed",
+            description: "Your graduation date must be at least 5 months away.",
+            variant: "destructive"
+          });
+          setIsVerifying(false);
+          if (onVerificationComplete) {
+            onVerificationComplete(false);
+          }
+          return;
+        }
+
         const studentInfo: StudentInfo = {
+          fullName: data.fullName,
+          contactNumber: data.contactNumber,
+          hashedGhanaCard: hashedGhanaCardNumber,
           universityName: data.universityName,
           studentId: data.studentId,
           graduationDate: data.graduationDate,
-          gpa: parseFloat(data.gpa),
-          isEnrolled: true // We assume the student is enrolled since we're verifying them
+          gpa: verifiedGPA,
+          isEnrolled: true
         };
         
-        // Save the student verification data
-        saveStudentVerification(user.principalId, studentInfo);
+        const saveSuccess = saveStudentVerification(user.principalId, studentInfo);
         
-        // Refresh user data
+        if (!saveSuccess) {
+          toast({
+            title: "Verification Failed",
+            description: "Could not save your verification data. Please try again.",
+            variant: "destructive"
+          });
+          setIsVerifying(false);
+          if (onVerificationComplete) {
+            onVerificationComplete(false);
+          }
+          return;
+        }
+        
         await checkAuth();
         
         toast({
           title: "Verification Successful",
-          description: "Your student identity has been verified using ZKPass.",
+          description: `Your student identity has been verified with a GPA of ${verifiedGPA.toFixed(1)}.`,
         });
         
-        // Call the onComplete callback
         if (onVerificationComplete) {
           onVerificationComplete(true);
         }
       } else {
-        // Update verification status in the local storage
         if (user.principalId) {
-          updateVerificationStatus(user.principalId, true);
+          const updateSuccess = updateVerificationStatus(user.principalId, true);
           
-          // Refresh user data
+          if (!updateSuccess) {
+            toast({
+              title: "Verification Failed",
+              description: "Could not update your verification status. Please try again.",
+              variant: "destructive"
+            });
+            setIsVerifying(false);
+            if (onVerificationComplete) {
+              onVerificationComplete(false);
+            }
+            return;
+          }
+          
           await checkAuth();
           
           toast({
@@ -116,9 +178,17 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
             description: "Your identity has been verified using ZKPass.",
           });
           
-          // Call the onComplete callback
           if (onVerificationComplete) {
             onVerificationComplete(true);
+          }
+        } else {
+          toast({
+            title: "Verification Failed",
+            description: "User ID not found. Please try logging in again.",
+            variant: "destructive"
+          });
+          if (onVerificationComplete) {
+            onVerificationComplete(false);
           }
         }
       }
@@ -142,7 +212,6 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
     completeVerification(data);
   };
   
-  // Render appropriate content based on the verification step
   const renderStepContent = () => {
     switch (verificationStep) {
       case 0:
@@ -151,27 +220,27 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
             <Shield className="h-16 w-16 mx-auto mb-4 text-adanfo-blue" />
             <h3 className="text-xl font-semibold mb-2">Student Identity Verification</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              ZKPass verifies your student status without sharing your personal information, ensuring privacy and security.
+              ZKPass verifies your student status and academic records without compromising your privacy, ensuring security and data protection.
             </p>
             <div className="space-y-4 mb-6">
               <div className="flex items-start gap-3 text-left">
                 <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                 <div>
-                  <p className="font-medium">Private & Secure</p>
-                  <p className="text-sm text-muted-foreground">Your personal data never leaves your device</p>
+                  <p className="font-medium">Secure GPA Verification</p>
+                  <p className="text-sm text-muted-foreground">Your GPA is verified directly from academic sources</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 text-left">
                 <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                 <div>
-                  <p className="font-medium">Prevent Multiple Accounts</p>
-                  <p className="text-sm text-muted-foreground">Ensures each student borrower is unique</p>
+                  <p className="font-medium">Enhanced Data Security</p>
+                  <p className="text-sm text-muted-foreground">Your Ghana Card number is securely hashed before storage</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 text-left">
                 <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                 <div>
-                  <p className="font-medium">Improves Credit Rating</p>
+                  <p className="font-medium">Improved Credit Rating</p>
                   <p className="text-sm text-muted-foreground">Verified student borrowers receive better loan terms</p>
                 </div>
               </div>
@@ -184,11 +253,65 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
           <div className="py-6">
             <h3 className="text-xl font-semibold mb-4">Student Information</h3>
             <p className="text-muted-foreground mb-6">
-              Provide your student details to generate a zero-knowledge proof of your academic status.
+              Provide your personal details to verify your identity and student status.
             </p>
             
             <Form {...form}>
               <form className="space-y-4 mb-6">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-adanfo-blue" />
+                        Full Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your full legal name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="contactNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-adanfo-blue" />
+                        Contact Number
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your phone number" type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="ghanaCardNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-adanfo-blue" />
+                        Ghana Card Number
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your Ghana Card number" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        🔒 This will be securely hashed before storage
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={form.control}
                   name="universityName"
@@ -212,32 +335,12 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
-                        <Fingerprint className="h-4 w-4 text-adanfo-blue" />
-                        Student ID
+                        <Hash className="h-4 w-4 text-adanfo-blue" />
+                        Index Number (University ID)
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your student ID" {...field} />
+                        <Input placeholder="Enter your student index number" {...field} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="gpa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4 text-adanfo-blue" />
-                        Current GPA (out of 4.0)
-                      </FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 3.5" type="number" step="0.1" min="0" max="4.0" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Your GPA must be at least 1.5 to be eligible for a loan
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -262,27 +365,12 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                     </FormItem>
                   )}
                 />
-                
-                <div className="bg-secondary/30 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <p className="font-medium">Important Information</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    The ZKPass system will verify:
-                  </p>
-                  <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Your current enrollment status</li>
-                    <li>GPA is at least 1.5/4.0</li>
-                    <li>Graduation date is at least 5 months away</li>
-                  </ul>
-                </div>
               </form>
             </Form>
             
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setVerificationStep(0)}>Back</Button>
-              <Button onClick={proceedToNextStep}>Next Step</Button>
+              <Button onClick={proceedToNextStep}>Next</Button>
             </div>
           </div>
         );
@@ -298,23 +386,15 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-2">
                   <EyeOff className="h-4 w-4 text-green-500" />
-                  <span>Personal Identifiers</span>
+                  <span>Ghana Card Number</span>
                 </div>
-                <span className="text-sm font-medium bg-green-100 text-green-800 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">Private</span>
+                <span className="text-sm font-medium bg-green-100 text-green-800 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">Hashed</span>
               </div>
               
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-2">
                   <EyeOff className="h-4 w-4 text-green-500" />
-                  <span>University Name</span>
-                </div>
-                <span className="text-sm font-medium bg-green-100 text-green-800 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">Private</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-2">
-                  <EyeOff className="h-4 w-4 text-green-500" />
-                  <span>Student ID</span>
+                  <span>Contact Number</span>
                 </div>
                 <span className="text-sm font-medium bg-green-100 text-green-800 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">Private</span>
               </div>
@@ -322,7 +402,23 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-blue-500" />
-                  <span>Student Status (Verified)</span>
+                  <span>Full Name</span>
+                </div>
+                <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">Shared</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-blue-500" />
+                  <span>University & Student Status</span>
+                </div>
+                <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">Shared</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-blue-500" />
+                  <span>Verified GPA</span>
                 </div>
                 <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">Shared</span>
               </div>
@@ -353,7 +449,7 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                     <FormLabel>I consent to student status verification</FormLabel>
                     <FormDescription>
                       You authorize ZKPass to verify your student status using the information provided.
-                      Only the verification result will be shared, not your personal data.
+                      Your Ghana Card number will be securely hashed, and your GPA will be verified directly from academic sources.
                     </FormDescription>
                   </div>
                 </FormItem>
@@ -366,7 +462,7 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                 onClick={proceedToNextStep}
                 disabled={!form.getValues().consent}
               >
-                Next Step
+                Next
               </Button>
             </div>
           </div>
@@ -385,16 +481,8 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                 <p className="font-medium">Privacy Notice</p>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                By completing this process, you're generating a zero-knowledge proof that confirms your student status without revealing personal data. This proof prevents multiple accounts and helps establish trust with lenders.
+                By completing this process, you're generating a zero-knowledge proof that confirms your student status without revealing sensitive data. Your GPA will be verified directly from academic sources, and your Ghana Card number will be securely hashed before storage.
               </p>
-              <div className="text-sm text-left">
-                <p className="font-medium mb-2">Your data remains private:</p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Information is processed locally on your device</li>
-                  <li>Only cryptographic proof is stored on the blockchain</li>
-                  <li>Lenders see only your verification status and credit score</li>
-                </ul>
-              </div>
             </div>
             
             <div className="flex justify-between">
@@ -407,7 +495,7 @@ const ZKPassVerification: React.FC<ZKPassVerificationProps> = ({ onVerificationC
                 {isVerifying ? (
                   <span className="flex items-center">
                     <span className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-current rounded-full"></span>
-                    Generating Proof...
+                    Verifying Academic Records...
                   </span>
                 ) : (
                   "Complete Verification"

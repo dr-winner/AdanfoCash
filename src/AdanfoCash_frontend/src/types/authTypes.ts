@@ -13,6 +13,9 @@ export interface User {
 }
 
 export interface StudentInfo {
+  fullName?: string;
+  contactNumber?: string;
+  hashedGhanaCard?: string;
   universityName: string;
   studentId: string;
   gpa: number;

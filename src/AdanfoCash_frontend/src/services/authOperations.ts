@@ -2,7 +2,7 @@
 import { initAuth } from "./authClient";
 import { getIdentityProviderUrl } from "./authConfig";
 
-// Login with NFID
+// Login with Internet Identity
 export const login = async (): Promise<boolean> => {
   const client = await initAuth();
   

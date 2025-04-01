@@ -32,7 +32,7 @@ export const getCurrentUser = async (): Promise<User> => {
       role: "unregistered",
       isAuthenticated: true,
       creditScore: 0,
-      isVerified: false
+      isVerified: checkIfVerified(principalId) // Check if verified even if not registered yet
     };
   }
   
@@ -41,7 +41,7 @@ export const getCurrentUser = async (): Promise<User> => {
   
   // User is registered
   return {
-    id: registrationData.name || generateNameFromPrincipal(principalId),
+    id: registrationData.name || (studentInfo?.fullName || generateNameFromPrincipal(principalId)),
     principalId,
     role: registrationData.role,
     isAuthenticated: true,
@@ -51,20 +51,43 @@ export const getCurrentUser = async (): Promise<User> => {
   };
 };
 
+// Helper function to check if a user is verified
+const checkIfVerified = (principalId: string): boolean => {
+  const verifications = getStudentVerifications();
+  const isVerified = !!verifications[principalId];
+  return isVerified;
+};
+
 // Register user as borrower or lender
 export const registerUser = (principalId: string, role: "borrower" | "lender", name: string): boolean => {
   try {
     const registrations = getRegistrations();
     
-    // Generate anonymous name instead of using user's real name
-    const anonymousName = generateNameFromPrincipal(principalId);
+    // Get student info for borrowers
+    const studentInfo = role === "borrower" ? getStudentVerification(principalId) : null;
+    
+    // Use real name from student verification if available for borrowers
+    const displayName = (role === "borrower" && studentInfo?.fullName) 
+      ? studentInfo.fullName 
+      : name || generateNameFromPrincipal(principalId);
+    
+    // Start credit score at 0 for borrowers
+    const initialCreditScore = role === "borrower" ? 0 : 0;
+    
+    // For borrowers, check if they're verified
+    const isVerified = role === "borrower" ? checkIfVerified(principalId) : false;
+    
+    if (role === "borrower" && !isVerified) {
+      console.error("Cannot register unverified borrower");
+      return false;
+    }
     
     registrations[principalId] = {
       role,
-      name: anonymousName, // Use anonymous name
+      name: displayName,
       registeredAt: new Date().toISOString(),
-      creditScore: role === "borrower" ? 0 : 0, // Start credit score at 0
-      isVerified: false
+      creditScore: initialCreditScore,
+      isVerified
     };
     
     localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrations));
@@ -84,19 +107,41 @@ export const updateVerificationStatus = (principalId: string, isVerified: boolea
       localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrations));
       return true;
     }
-    return false;
+    
+    // If user is not registered yet, prepare their data with verification status
+    if (!registrations[principalId]) {
+      // Get student verification data if available
+      const studentInfo = getStudentVerification(principalId);
+      
+      registrations[principalId] = {
+        role: "unregistered",
+        name: studentInfo?.fullName || generateNameFromPrincipal(principalId),
+        registeredAt: new Date().toISOString(),
+        creditScore: 0,
+        isVerified
+      };
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrations));
+    }
+    
+    return true;
   } catch (error) {
     console.error("Verification update error:", error);
     return false;
   }
 };
 
-// Save student verification information
+// Save student verification information with updated fields
 export const saveStudentVerification = (
   principalId: string, 
   studentInfo: StudentInfo
 ): boolean => {
   try {
+    // Validate student information
+    if (!validateStudentInfo(studentInfo)) {
+      console.error("Invalid student information");
+      return false;
+    }
+    
     const verifications = getStudentVerifications();
     verifications[principalId] = {
       ...studentInfo,
@@ -111,6 +156,36 @@ export const saveStudentVerification = (
     return true;
   } catch (error) {
     console.error("Student verification error:", error);
+    return false;
+  }
+};
+
+// Validate student information
+const validateStudentInfo = (studentInfo: StudentInfo): boolean => {
+  try {
+    // Check for required fields
+    if (!studentInfo.universityName || !studentInfo.studentId || 
+        !studentInfo.graduationDate) {
+      return false;
+    }
+    
+    // Check GPA is at least 1.5
+    if (studentInfo.gpa < 1.5) {
+      return false;
+    }
+    
+    // Check graduation date is at least 5 months away
+    const graduationDate = new Date(studentInfo.graduationDate);
+    const fiveMonthsFromNow = new Date();
+    fiveMonthsFromNow.setMonth(fiveMonthsFromNow.getMonth() + 5);
+    
+    if (graduationDate < fiveMonthsFromNow) {
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error validating student info:", error);
     return false;
   }
 };
@@ -314,7 +389,7 @@ const getRegistration = (principalId: string): any => {
   return registrations[principalId];
 };
 
-// Generate a realistic anonymous name based on the principal
+// Generate a realistic name based on the principal or use real name if available
 const generateNameFromPrincipal = (principalId: string): string => {
   const localNames = [
     "Anon Student",
